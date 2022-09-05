@@ -491,7 +491,7 @@ class StructureGraph:
         self.residues = residues
         self.graph = {}
 
-    def create_graph(self, distance_threshhold: float = 2.0):
+    def create_graph(self, distance_threshold: float = 2.0):
         """
         Takes the distance threshold value as input, which is treated a as cut-off of bonded state.
         Creates the graph of the given structure with the residues as nodes.
@@ -500,7 +500,7 @@ class StructureGraph:
 
         Arguments:
 
-        - `distance_threshhold`: float - distance threshold value in Angstrom.
+        - `distance_threshold`: float - distance threshold value in Angstrom.
         """
         res_names: list = []
         for residue in self.residues:
@@ -511,7 +511,7 @@ class StructureGraph:
                 if residue_m != residue_n:
                     if (
                         distance_between_residues(residue_m, residue_n)
-                        < distance_threshhold
+                        < distance_threshold
                     ):
                         self.graph[residue_m].append(residue_n)
 
@@ -826,36 +826,27 @@ def save_ligand_to_file(
 def extract(
     original_structure: Bio.PDB.Structure.Structure,
     output_directory: str,
+    distance_threshold: float,
     num_atoms: int,
     mol_weight: int,
     rmsd: float,
-    debug=False,
-) -> None:
+    debug=False
+    ) -> None:
 
     hetero_residues = get_hetero_residues(original_structure, debug=debug)
     structure = StructureGraph(hetero_residues)
-    structure.create_graph()
+    structure.create_graph(distance_threshold=distance_threshold)
     clusters = structure.get_clusters()
     residues = list()
     for cluster in clusters:
         residues.append(combine(cluster))
 
-    ligands = filter_ligands(
-        residues, num_atoms=num_atoms, mol_weight=mol_weight, rmsd=rmsd, debug=debug
-    )
+    ligands = filter_ligands(residues, num_atoms=num_atoms, mol_weight=mol_weight, rmsd=rmsd, debug=debug)
 
-    print(
-        f"Structure {original_structure.get_id()} has {len(ligands)} suitable ligands according to chosen filtration criteria."
-    )
+    print(f"Structure {original_structure.get_id()} has {len(ligands)} suitable ligands according to chosen filtration criteria.")
 
-    ligand_structures = [
-        resi_to_struct(ligand, original_structure=original_structure)
-        for ligand in ligands
-    ]
-
-    save_ligand_to_file(
-        ligand_structures, output_directory, original_structure, debug=True
-    )
+    ligand_structures = [resi_to_struct(ligand, original_structure=original_structure) for ligand in ligands]
+    save_ligand_to_file(ligand_structures, output_directory, original_structure, debug=True)
 
 
 def get_distance_to_pocket(
@@ -916,6 +907,7 @@ def filter_fpocket(
 
 
 def main():
+    distance_threshold = 1.7
     num_atoms = 15
     mol_weight = 200
     rmsd = 1.5
@@ -957,12 +949,8 @@ def main():
 
         elif user_input == "":
             random_structure = get_random_structures(PDB_PATH, 1, debug=False)
-            print(
-                f"Extracting ligands from 1 random structure {random_structure.id}..."
-            )
-            extract(
-                random_structure, OUT_PATH, num_atoms, mol_weight, rmsd, debug=False
-            )
+            print(f"Extracting ligands from 1 random structure {random_structure.id}...")
+            extract(random_structure, OUT_PATH, distance_threshold,  num_atoms, mol_weight, rmsd, debug=False)
 
         elif user_input.startswith("3"):
             print("b   : Go back.")
@@ -978,6 +966,7 @@ def main():
                     extract(
                         random_structure,
                         OUT_PATH,
+                        distance_threshold,
                         num_atoms,
                         mol_weight,
                         rmsd,
@@ -995,6 +984,7 @@ def main():
                             extract(
                                 random_structure,
                                 OUT_PATH,
+                                distance_threshold,
                                 num_atoms,
                                 mol_weight,
                                 rmsd,
@@ -1013,7 +1003,7 @@ def main():
             try:
                 print(f"Extracting ligands from structure {user_input}...")
                 structure = get_structure(user_input, PDB_PATH, debug=True)
-                extract(structure, OUT_PATH, num_atoms, mol_weight, rmsd, debug=False)
+                extract(structure, OUT_PATH, distance_threshold, num_atoms, mol_weight, rmsd, debug=False)
             except Exception:
                 print("Invalid input. Try again.")
 

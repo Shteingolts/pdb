@@ -37,7 +37,8 @@ def clean_pdb(input_file: str, output_directory: str = None):
         return os.path.join(output_directory, file_name)
 
 
-# Code for this function was shamelessly stolen from DeepPocket (https://github.com/devalab/DeepPocket)
+# Code for this function was shamelessly stolen
+# from DeepPocket (https://github.com/devalab/DeepPocket)
 def fpocket(protein_file: str) -> str:
     """
     Launches the focket and returns the path to the resulting pockets directory.
@@ -50,7 +51,8 @@ def fpocket(protein_file: str) -> str:
     fpocket_dir: str = os.path.join(protein_file.replace('.pdb', '_out'), 'pockets')
     return fpocket_dir
 
-# Code for this function was shamelessly stolen from DeepPocket (https://github.com/devalab/DeepPocket)
+# Code for this function was shamelessly stolen
+# from DeepPocket (https://github.com/devalab/DeepPocket)
 def get_centers(pockets_dir):
     """
     Takes pocket files produced by fpocket as input
