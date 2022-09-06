@@ -509,10 +509,7 @@ class StructureGraph:
         for residue_m in self.graph:
             for residue_n in self.graph:
                 if residue_m != residue_n:
-                    if (
-                        distance_between_residues(residue_m, residue_n)
-                        < distance_threshold
-                    ):
+                    if (distance_between_residues(residue_m, residue_n) < distance_threshold):
                         self.graph[residue_m].append(residue_n)
 
     def print_connectivity(self):
@@ -623,7 +620,8 @@ def filter_ligands(
     debug=False,
 ) -> list[Bio.PDB.Residue.Residue]:
     """
-    Takes the list of residues as input and filters them according to `num_atoms` and `mol_weight` criteria.
+    Takes the list of residues as input and filters them according to `num_atoms`
+    and `mol_weight` criteria.
 
     Returns the `list` of `Bio.PDB.Residue.Residue` objects.
 
@@ -634,68 +632,45 @@ def filter_ligands(
     - `mol_weight`: `int` - the molecular weight of the ligand.
     - `debug`: `bool` - if True, debug information to the console.
     """
+
+    # Preliminary filtering based on number of atoms and molecular mass
     filtered_residues: list = []
     for residue in residues:
-        if (
-            len(residue.get_list()) > num_atoms
-            and get_molecular_mass(residue) >= mol_weight
-        ):
+        if (len(residue.get_list()) > num_atoms and get_molecular_mass(residue) >= mol_weight):
             filtered_residues.append(residue)
 
-    if debug is True:
+    if debug:
         print(f"Criteria: num_atoms = {num_atoms}, mol_weight = {mol_weight}")
         print(f"Number of residues before filtering: {len(residues)}")
         print(f"Number of residues after filtering: {len(filtered_residues)}")
-    duplicates: dict = (
-        {}
-    )  # dictionary with residue names as keys and lists of residue objects as values
+
+    # Creating a dict with residue names as keys and lists of residue objects with these names
+    # as values
+    duplicates: dict = {}
     for residue in filtered_residues:
         if residue.resname not in duplicates:
             duplicates[residue.resname] = [residue]
         else:
             duplicates[residue.resname].append(residue)
-    if debug is True:
-        num_dupes = 0
-        for key in duplicates:
-            if len(duplicates[key]) > 1:
-                num_dupes += 1
-        print(f"Number of duplicate residues: {num_dupes}")
-    if debug is True:
-        print(duplicates)
-    if debug is True:
-        for residue_name in duplicates:
-            print(
-                f"\nResidue {residue_name} occured {len(duplicates[residue_name])} times."
-            )
-    ligands: list = []  # a final list of ligands
-    for residue_name in duplicates:
-        if len(duplicates[residue_name]) == 1:
-            ligands.append(duplicates[residue_name][0])
-            if debug is True:
-                print(
-                    f"\nLigand {residue_name} ({duplicates[residue_name][0]}) was added to ligands."
-                )
-        else:
-            if debug is True:
-                print(f"\nChecking conformation of residue {residue_name}.")
-            for index_n, residue_n in enumerate(duplicates[residue_name]):
-                for index_m, residue_m in enumerate(duplicates[residue_name]):
-                    if index_n != index_m:
-                        if similar_conformation(
-                            residue_n, residue_m, rmsd_threshold=rmsd, debug=debug
-                        ):
-                            del duplicates[residue_name][index_m]
-            if debug is True:
-                print(f"Conformations: {duplicates[residue_name]}")
-            for residue in duplicates[residue_name]:
-                ligands.append(residue)
-                if debug is True:
-                    print(f"\nLigand {residue.resname} was added to ligands.")
-    if debug is True:
-        print(f"\nNumber of ligands after filtering: {len(ligands)}")
-        for ligand in ligands:
-            print(f"Ligand {ligand.resname} with ID {ligand.get_id()}")
 
+    # Creating a list of ligands, where each residue with unique name will appear only once
+    ligands: list = [] 
+    for residue_name, same_residues in duplicates.items():
+        if len(same_residues) == 1:
+            ligands.append(same_residues[0])
+        else:
+
+            # comparing each residue with all others with the same name and
+            # checking whether or not they have the same number of atoms
+            # and have similar conformations based on rmsd value
+
+            for index_n, residue_n in enumerate(same_residues):
+                for index_m, residue_m in enumerate(same_residues):
+                    if index_n != index_m and\
+                        len(residue_n.get_list()) == len(residue_m.get_list()) and\
+                        similar_conformation(residue_n, residue_m, rmsd_threshold=rmsd, debug=debug):
+                        del same_residues[index_m]
+        ligands = list(same_residues)
     return ligands
 
 
@@ -840,18 +815,28 @@ def extract(
     residues = list()
     for cluster in clusters:
         residues.append(combine(cluster))
-
     ligands = filter_ligands(residues, num_atoms=num_atoms, mol_weight=mol_weight, rmsd=rmsd, debug=debug)
 
-    print(f"Structure {original_structure.get_id()} has {len(ligands)} suitable ligands according to chosen filtration criteria.")
+    if len(ligands) > 1 or len(ligands) == 0:
+        print(f"Structure {original_structure.get_id()} has {len(ligands)} suitable ligands.")
+        print('using fpocket...')
+
 
     ligand_structures = [resi_to_struct(ligand, original_structure=original_structure) for ligand in ligands]
     save_ligand_to_file(ligand_structures, output_directory, original_structure, debug=True)
 
 
-def get_distance_to_pocket(
-    structure: Bio.PDB.Residue.Residue, pocket: namedtuple
-) -> float:
+def get_distance_to_pocket(structure: Bio.PDB.Residue.Residue, pocket: namedtuple) -> float:
+    """
+    Takes `Bio.PDB.Residue.Residue` and `pocket` as inputs and calculates the minimum
+    distance between the pocket center and the closest atom of the residue.
+
+    Returns `min_distance` as float.
+
+    Arguments:
+    - `structure` : 'Bio.PDB.Residue.Residue' object.
+    - `pocket` : namedtuple.
+    """
     min_distance = 1000
     for atom in structure.get_list():
         dist = distance.euclidean(atom.get_coord(), pocket.center)
@@ -883,11 +868,7 @@ def filter_fpocket(
     """
 
     cleaned_pdb: str = ps.clean_pdb(
-        os.path.join(
-            pdb_path,
-            original_structure_id[1:-1],
-            "pdb" + original_structure_id + ".ent",
-        )
+        os.path.join(pdb_path, original_structure_id[1:-1], "pdb" + original_structure_id + ".ent")
     )
     fpocket_dir: str = ps.fpocket(cleaned_pdb)
     barycenters = ps.get_centers(fpocket_dir)
@@ -897,17 +878,14 @@ def filter_fpocket(
     filtered_ligands: list = []
     for ligand in ligands:
         for pocket in pockets:
-            if (
-                get_distance_to_pocket(ligand, pocket) < distance_threshold
-                and ligand not in filtered_ligands
-            ):
+            if (get_distance_to_pocket(ligand, pocket) < distance_threshold and ligand not in filtered_ligands):
                 filtered_ligands.append(ligand)
                 break
     return filtered_ligands
 
 
 def main():
-    distance_threshold = 1.7
+    distance_threshold = 1.6
     num_atoms = 15
     mol_weight = 200
     rmsd = 1.5
