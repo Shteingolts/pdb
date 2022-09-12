@@ -1,5 +1,6 @@
 from collections import namedtuple
 import os
+import copy
 import platform
 import warnings
 import Bio.PDB
@@ -28,9 +29,7 @@ elif platform.system() == "Linux":
     OUT_PATH = os.path.join("/mnt", "c", "users", "serge", "desktop")
 
 
-def get_structure(
-    structure_id: str, pdb_path: str, *, debug=False
-) -> Bio.PDB.Structure.Structure:
+def get_structure(structure_id: str, pdb_path: str, *, debug=False) -> Bio.PDB.Structure.Structure:
     """
     Takes the structure ID and the path to the PDB directory as inputs.
     Returns the `Bio.PDB.Structure.Structure` object.
@@ -41,19 +40,13 @@ def get_structure(
     - `pdb_path`: str - path to the PDB directory
     - `debug`: bool - prints debug information to the console.
     """
-    struct_path = os.path.join(
-        pdb_path, structure_id[1:-1], "pdb" + structure_id + ".ent"
-    )
+    struct_path = os.path.join(pdb_path, structure_id[1:-1], "pdb" + structure_id + ".ent")
     try:
-        structure = Bio.PDB.PDBParser(QUIET=True).get_structure(
-            structure_id, struct_path
-        )
-    except:
-        raise Exception(f"Could not find structure {structure_id} in {struct_path}")
+        structure = Bio.PDB.PDBParser(QUIET=True).get_structure(structure_id, struct_path)
+    except Exception as exc:
+        raise Exception(f"Could not find structure {structure_id} in {struct_path}") from exc
     if debug:
-        print(
-            f"Structure {structure.get_id()} was loaded from {os.path.abspath(struct_path)}"
-        )
+        print(f"Structure {structure.get_id()} was loaded from {os.path.abspath(struct_path)}")
     return structure
 
 
@@ -148,9 +141,7 @@ def get_hetero_residues(structure: Bio.PDB.Structure.Structure, *, debug=False) 
                 h_residues.append(residue)
 
     if debug is True:
-        print(
-            f"Found {num_h_residues} hetero residues in structure {structure.get_id()} ."
-        )
+        print(f"Found {num_h_residues} hetero residues in structure {structure.get_id()} .")
         for ligand in h_residues:
             print(f"Residue {ligand.get_id()} has {len(ligand.get_list())} atoms.")
     if len(h_residues) == 0:
@@ -653,24 +644,26 @@ def filter_ligands(
         else:
             duplicates[residue.resname].append(residue)
 
+    if debug:
+        for residue in duplicates.items():
+            print(f'{residue} : {residues}')
+
     # Creating a list of ligands, where each residue with unique name will appear only once
     ligands: list = [] 
     for residue_name, same_residues in duplicates.items():
         if len(same_residues) == 1:
             ligands.append(same_residues[0])
         else:
-
             # comparing each residue with all others with the same name and
             # checking whether or not they have the same number of atoms
             # and have similar conformations based on rmsd value
-
             for index_n, residue_n in enumerate(same_residues):
                 for index_m, residue_m in enumerate(same_residues):
                     if index_n != index_m and\
                         len(residue_n.get_list()) == len(residue_m.get_list()) and\
                         similar_conformation(residue_n, residue_m, rmsd_threshold=rmsd, debug=debug):
                         del same_residues[index_m]
-        ligands = list(same_residues)
+        ligands = ligands + same_residues
     return ligands
 
 
@@ -716,23 +709,19 @@ def get_rmsd(
     - `residue2`: `Bio.PDB.Residue.Residue`
     - `debug`: `bool` - if True, prints debug information to the console.
     """
-    atoms1 = residue1.get_list()
-    atoms2 = residue2.get_list()
+    atoms1 = copy.deepcopy(residue1.get_list())
+    atoms2 = copy.deepcopy(residue2.get_list())
     sup = Bio.PDB.Superimposer()
     sup.set_atoms(atoms1, atoms2)
     rms_before = sup.rms
 
     if debug is True:
-        print(
-            f"RMSD between {residue1.resname} and {residue2.resname} before transformation: {sup.rms}"
-        )
+        print(f"RMSD between {residue1.resname} and {residue2.resname} before transformation: {sup.rms}")
 
     sup.apply(atoms1)
 
     if debug is True:
-        print(
-            f"RMSD between {residue1.resname} and {residue2.resname} after transformation: {sup.rms}"
-        )
+        print(f"RMSD between {residue1.resname} and {residue2.resname} after transformation: {sup.rms}")
 
     rms_after = sup.rms
 
@@ -758,19 +747,11 @@ def save_ligand_to_file(
         ligand_file = PDBIO()
         ligand_file.set_structure(ligand_list[0])
         structure_directory = original_structure.get_id()
-        file_name = "".join(
-            [original_structure.get_id(), "_", ligand_list[0].get_id(), ".pdb"]
-        )
+        file_name = "".join([original_structure.get_id(), "_", ligand_list[0].get_id(), ".pdb"])
         file_path = os.path.join(output_directory, structure_directory, file_name)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         ligand_file.save(file_path)
 
-        if debug:
-            if os.path.exists(file_path):
-                if os.path.getsize(file_path) > 0:
-                    print(
-                        f"    Ligand {ligand_list[0].get_id()} from structure {original_structure.get_id()} was saved to {os.path.abspath(file_path)}"
-                    )
     else:
         structure_directory = original_structure.get_id()
         for index, structure in enumerate(ligand_list):
@@ -789,13 +770,6 @@ def save_ligand_to_file(
             file_path = os.path.join(output_directory, structure_directory, file_name)
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             ligand_file.save(file_path)
-
-            if debug:
-                if os.path.exists(file_path):
-                    if os.path.getsize(file_path) > 0:
-                        print(
-                            f"    Ligand {structure.get_id()} from structure {original_structure.get_id()} was saved to {os.path.abspath(file_path)}"
-                        )
 
 
 def extract(
