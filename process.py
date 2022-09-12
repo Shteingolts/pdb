@@ -493,15 +493,13 @@ class StructureGraph:
 
         - `distance_threshold`: float - distance threshold value in Angstrom.
         """
-        res_names: list = []
         for residue in self.residues:
             self.graph[residue] = []
 
         for residue_m in self.graph:
             for residue_n in self.graph:
-                if residue_m != residue_n:
-                    if (distance_between_residues(residue_m, residue_n) < distance_threshold):
-                        self.graph[residue_m].append(residue_n)
+                if residue_m != residue_n and (distance_between_residues(residue_m, residue_n) < distance_threshold):
+                    self.graph[residue_m].append(residue_n)
 
     def print_connectivity(self):
         """
@@ -650,7 +648,7 @@ def filter_ligands(
 
     # Creating a list of ligands, where each residue with unique name will appear only once
     ligands: list = [] 
-    for residue_name, same_residues in duplicates.items():
+    for _residue_name, same_residues in duplicates.items():
         if len(same_residues) == 1:
             ligands.append(same_residues[0])
         else:
@@ -686,7 +684,7 @@ def similar_conformation(
     - `rmsd_threshold`: `float` - the rmsd threshold.
     - `debug`: `bool` - if `True`, prints debug information to the console.
     """
-    rmsd_before, rmsd_after = get_rmsd(residue1, residue2, debug=debug)
+    _rmsd_before, rmsd_after = get_rmsd(residue1, residue2, debug=debug)
     if rmsd_after < rmsd_threshold:
         return True
     else:
@@ -845,7 +843,7 @@ def filter_fpocket(
         os.path.join(pdb_path, original_structure_id[1:-1], "pdb" + original_structure_id + ".ent")
     )
     fpocket_dir: str = ps.fpocket(cleaned_pdb)
-    barycenters = ps.get_centers(fpocket_dir)
+    _barycenters = ps.get_centers(fpocket_dir)
     pockets: list = ps.get_pockets(fpocket_dir, num_pockets_threshold=3)
     ps.write_bat(os.path.join(pdb_path, original_structure_id[1:-1]), fpocket_dir)
 
@@ -956,8 +954,8 @@ def main():
                 print(f"Extracting ligands from structure {user_input}...")
                 structure = get_structure(user_input, PDB_PATH, debug=True)
                 extract(structure, OUT_PATH, distance_threshold, num_atoms, mol_weight, rmsd, debug=False)
-            except Exception:
-                print("Invalid input. Try again.")
+            except Exception as exc:
+                raise Exception("Invalid input. Try again.") from exc
 
         else:
             print("Invalid input. Try again.")
