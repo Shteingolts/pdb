@@ -3,12 +3,13 @@ import time
 from multiprocessing import Pool
 import process
 
+
 DESKTOP = '/mnt/c/users/serge/desktop'
 OUT_DIR = os.path.join(DESKTOP, 'test_structures')
-
 NUM_ATOMS = 15
 MOL_WEIGHT = 200
 DISTANCE_THRESHOLD = 1.7
+
 
 with open(os.path.join(DESKTOP, 'test_structs.txt'), 'r') as f:
     test_structures = f.read().split()
@@ -16,15 +17,14 @@ test_structures = [sid.lower() for sid in test_structures]
 test_structures.remove('2vrv')
 
 
-
-
 def extract_ligands(
     name,
     num_atoms=NUM_ATOMS,
     mol_weight=MOL_WEIGHT,
-    distance_threshold=DISTANCE_THRESHOLD) -> tuple[str, float]:
+    distance_threshold=DISTANCE_THRESHOLD
+    ) -> tuple[str, float]:
     """
-    The same as extract in process, but for multiprocessing
+    The same as extract in process, but for multiprocessing.
     """
     start_job = time.perf_counter()
 
