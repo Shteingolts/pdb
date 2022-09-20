@@ -23,9 +23,7 @@ if platform.system() == "Windows":
     OUT_PATH = os.path.join("C:", "Users", "serge", "Desktop")
 elif platform.system() == "Linux":
     print("Running on Linux.\n")
-    PDB_PATH = os.path.join(
-        "/mnt", "c", "users", "serge", "desktop", "pdb_download", "pdb"
-    )
+    PDB_PATH = os.path.join("/mnt", "c", "users", "serge", "desktop", "pdb_download", "pdb")
     OUT_PATH = os.path.join("/mnt", "c", "users", "serge", "desktop")
 
 
@@ -134,11 +132,13 @@ def get_hetero_residues(structure: Bio.PDB.Structure.Structure, *, debug=False) 
     """
     h_residues: list = []
     num_h_residues: int = 0
-    for residue in structure.get_residues():
-        if residue.get_id()[0].startswith("H"):
-            if not part_of_protein(residue, structure):
-                num_h_residues += 1
-                h_residues.append(residue)
+    # for the rare cases of there being more than 1 model, only taking the 1st one
+    for chain in structure.get_list()[0].get_list():
+        for residue in chain:
+            if residue.get_id()[0].startswith("H"):
+                if not part_of_protein(residue, structure):
+                    num_h_residues += 1
+                    h_residues.append(residue)
 
     if debug is True:
         print(f"Found {num_h_residues} hetero residues in structure {structure.get_id()} .")
@@ -633,36 +633,22 @@ def filter_ligands(
         print(f"Number of residues before filtering: {len(residues)}")
         print(f"Number of residues after filtering: {len(filtered_residues)}")
 
-    # Creating a dict with residue names as keys and lists of residue objects with these names
-    # as values
-    duplicates: dict = {}
-    for residue in filtered_residues:
-        if residue.resname not in duplicates:
-            duplicates[residue.resname] = [residue]
-        else:
-            duplicates[residue.resname].append(residue)
+    # list of future ligands with unique conformations
+    unique_ones = []
 
-    if debug:
-        for residue in duplicates.items():
-            print(f'{residue} : {residues}')
+    # while the list of filtered ligands is not empty
+    while filtered_residues:
+        # taking an element from the filtered residues and adding it
+        # to the unique ones
+        residue = filtered_residues.pop()
+        unique_ones.append(residue)
+        # deleting all other residues with the similar conformations
+        # from the original list of filtered residues
+        for index, other_residue in enumerate(filtered_residues):
+            if similar_conformation(residue, other_residue, rmsd):
+                filtered_residues.pop(index)
 
-    # Creating a list of ligands, where each residue with unique name will appear only once
-    ligands: list = [] 
-    for _residue_name, same_residues in duplicates.items():
-        if len(same_residues) == 1:
-            ligands.append(same_residues[0])
-        else:
-            # comparing each residue with all others with the same name and
-            # checking whether or not they have the same number of atoms
-            # and have similar conformations based on rmsd value
-            for index_n, residue_n in enumerate(same_residues):
-                for index_m, residue_m in enumerate(same_residues):
-                    if index_n != index_m and\
-                        len(residue_n.get_list()) == len(residue_m.get_list()) and\
-                        similar_conformation(residue_n, residue_m, rmsd_threshold=rmsd, debug=debug):
-                        del same_residues[index_m]
-        ligands = ligands + same_residues
-    return ligands
+    return unique_ones
 
 
 def similar_conformation(
@@ -675,6 +661,8 @@ def similar_conformation(
     Takes two `Bio.PDB.Residue.Residue` objects as input and checks if
     their conformation are similar based on the rmsd.
 
+    If two different residues are compared, automatically returns `False`.
+
     Returns `True` if the conformation are similar, `False` otherwise.
 
     Arguments:
@@ -684,6 +672,10 @@ def similar_conformation(
     - `rmsd_threshold`: `float` - the rmsd threshold.
     - `debug`: `bool` - if `True`, prints debug information to the console.
     """
+
+    if residue1.id[0] != residue2.id[0] or len(residue1.get_list()) != len(residue2.get_list()):
+        return False
+
     _rmsd_before, rmsd_after = get_rmsd(residue1, residue2, debug=debug)
     if rmsd_after < rmsd_threshold:
         return True

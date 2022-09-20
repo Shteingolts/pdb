@@ -1,7 +1,9 @@
 import os
 import time
 from multiprocessing import Pool
+import importlib
 import process
+importlib.reload(process)
 
 
 DESKTOP = '/mnt/c/users/serge/desktop'
@@ -39,6 +41,7 @@ def extract_ligands(
     ligands = process.filter_ligands(residues, num_atoms=num_atoms, mol_weight=mol_weight, rmsd=2.0)
     ligand_structures = [process.resi_to_struct(ligand, original_structure=original_structure) for ligand in ligands]
     process.save_ligand_to_file(ligand_structures, OUT_DIR, original_structure, debug=True)
+        # print(f'Structure {original_structure.id} raised an error during ligand filtering!')
 
     end_job = time.perf_counter()
     job_duration = end_job - start_job
