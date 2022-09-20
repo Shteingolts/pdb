@@ -721,8 +721,7 @@ def get_rmsd(
 def save_ligand_to_file(
     ligand_list: list[Bio.PDB.Structure.Structure],
     output_directory: str,
-    original_structure: Bio.PDB.Structure.Structure,
-    debug=False,
+    original_structure: Bio.PDB.Structure.Structure
 ) -> None:
     """
     Writes a PDB file with the ligand structure.
@@ -787,7 +786,7 @@ def extract(
 
 
     ligand_structures = [resi_to_struct(ligand, original_structure=original_structure) for ligand in ligands]
-    save_ligand_to_file(ligand_structures, output_directory, original_structure, debug=True)
+    save_ligand_to_file(ligand_structures, output_directory, original_structure)
 
 
 def get_distance_to_pocket(structure: Bio.PDB.Residue.Residue, pocket: namedtuple) -> float:
