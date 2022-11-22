@@ -1,3 +1,22 @@
+"""
+IMPORTANT, PLEASE READ!
+
+Current version of the script assumes the local (partial) copy of the pdb,
+saved in the pdb "tree" fashion, i.e., the root directory containing 
+multiple other directories, each named with two middle characters of the 
+structure IDs. Structures themselves should be stores with the .ent extension
+and a pdb prefix, e.g. a file for the structure 7VYP should be named `pdb7vyp.ent`.
+
+As an example, the structure with the PDB ID 7VYP should be located in 
+`.../pdb_dir/vy/pdb7VYP.ent`.
+
+However, since the `get_structure()` function reterns a `Bio.PDB.Structure.Structure`
+object, it would be trivial to implement a different function with the API provided by
+the BioPython library to fetch a requsted structure on demand from the PDB.
+"""
+
+
+
 from collections import namedtuple
 import os
 import copy
@@ -17,14 +36,16 @@ from Bio.PDB.Atom import PDBConstructionWarning
 
 warnings.simplefilter("ignore", PDBConstructionWarning)
 
+
+# current paths 
 if platform.system() == "Windows":
     print("Running on Windows.\n")
-    PDB_PATH = os.path.join("C:", "Users", "serge", "Desktop", "pdb_download", "pdb")
-    OUT_PATH = os.path.join("C:", "Users", "serge", "Desktop")
+    # PDB_PATH = "ADD PATH TO YOUR LOCAL PDB COPY HERE"
+    # OUT_PATH = "ADD OUT PATH HERE"
 elif platform.system() == "Linux":
     print("Running on Linux.\n")
-    PDB_PATH = os.path.join("/mnt", "c", "users", "serge", "desktop", "pdb_download", "pdb")
-    OUT_PATH = os.path.join("/mnt", "c", "users", "serge", "desktop")
+    # PDB_PATH = "ADD PATH TO YOUR LOCAL PDB COPY HERE"
+    # OUT_PATH = "ADD OUT PATH HERE"
 
 
 def get_structure(structure_id: str, pdb_path: str, *, debug=False) -> Bio.PDB.Structure.Structure:
