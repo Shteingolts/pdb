@@ -6,8 +6,8 @@ import numpy as np
 import Bio.PDB
 from Bio.PDB import PDBParser, Select
 
-PDB_PATH = os.path.join('/mnt', 'c', 'users', 'serge', 'desktop', 'pdb_download', 'pdb')
-OUT_PATH = os.path.join('/mnt', 'c', 'users', 'serge', 'desktop')
+PDB_PATH = "example/path/pdb"
+OUT_PATH = "example/out/path"
 
 class NonHetSelect(Select):
     """BioPython class for selecting desired structure parts."""
