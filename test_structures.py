@@ -5,14 +5,13 @@ import importlib
 import process
 
 
-DESKTOP = '/mnt/c/users/serge/desktop'
-OUT_DIR = os.path.join(DESKTOP, 'test_structures')
+OUT_DIR = "example/path/test_structures"
 NUM_ATOMS = 10
 MOL_WEIGHT = 150
 DISTANCE_THRESHOLD = 1.7
 
 
-with open(os.path.join(DESKTOP, 'test_structs.txt'), 'r') as f:
+with open('test_structs.txt', 'r') as f:
     test_structures = f.read().split()
 test_structures = [structure_id.lower() for structure_id in test_structures]
 test_structures.remove('2vrv') # structure 2vrv is obsolete for some reason
